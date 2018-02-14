@@ -1,8 +1,12 @@
 package com.twitter.querulous.database
 
-import java.sql.{SQLException, Connection}
-import org.apache.commons.dbcp.{PoolableConnectionFactory, DriverManagerConnectionFactory, PoolingDataSource}
-import org.apache.commons.pool.impl.GenericObjectPool
+import java.sql.{Connection, SQLException}
+
+import org.apache.commons.dbcp2.{DriverManagerConnectionFactory, PoolableConnection, PoolableConnectionFactory, PoolingDataSource}
+import org.apache.commons.pool2.{ObjectPool, PooledObject, PooledObjectFactory}
+import org.apache.commons.pool2.impl.{GenericObjectPool, GenericObjectPoolConfig}
+
+import scala.collection.JavaConversions._
 import concurrent.duration.Duration
 
 class ApachePoolingDatabaseFactory(
@@ -60,30 +64,26 @@ extends Database {
 
   Class.forName("com.mysql.jdbc.Driver")
 
-  private val config = new GenericObjectPool.Config
-  config.maxActive = maxOpenConnections
-  config.maxIdle = maxOpenConnections
-  config.minIdle = minOpenConnections
-  config.maxWait = openTimeout.toMillis
+  private val config = new GenericObjectPoolConfig
+  config.setMaxTotal(maxOpenConnections)
+  config.setMaxIdle(maxOpenConnections)
+  config.setMinIdle(minOpenConnections)
+  config.setMaxWaitMillis(openTimeout.toMillis)
 
-  config.timeBetweenEvictionRunsMillis = checkConnectionHealthWhenIdleFor.toMillis
-  config.testWhileIdle = false
-  config.testOnBorrow = checkConnectionHealthOnReservation
-  config.minEvictableIdleTimeMillis = evictConnectionIfIdleFor.toMillis
+  config.setTimeBetweenEvictionRunsMillis(checkConnectionHealthWhenIdleFor.toMillis)
+  config.setTestWhileIdle(false)
+  config.setTestOnBorrow(checkConnectionHealthOnReservation)
+  config.setMinEvictableIdleTimeMillis(evictConnectionIfIdleFor.toMillis)
 
-  config.lifo = false
+  config.setLifo(false)
 
-  private val connectionPool = new GenericObjectPool(null, config)
   private val connectionFactory = new DriverManagerConnectionFactory(url(hosts, name, urlOptions), username, password)
-  private val poolableConnectionFactory = new PoolableConnectionFactory(
-    connectionFactory,
-    connectionPool,
-    null,
-    "/* ping */ SELECT 1",
-    false,
-    true)
+  private val poolableConnectionFactory = new PoolableConnectionFactory(connectionFactory, null)
+  private val connectionPool = new GenericObjectPool(poolableConnectionFactory, config)
   private val poolingDataSource = new PoolingDataSource(connectionPool)
   poolingDataSource.setAccessToUnderlyingConnectionAllowed(true)
+  poolableConnectionFactory.setConnectionInitSql(seqAsJavaList(Seq("/* ping */ SELECT 1")))
+  poolableConnectionFactory.setDefaultAutoCommit(true)
 
   def close(connection: Connection) {
     try {
@@ -97,5 +97,5 @@ extends Database {
 
   def open() = poolingDataSource.getConnection()
 
-  override def toString = hosts.head + "_" + name
+  override def toString: String = hosts.head + "_" + name
 }

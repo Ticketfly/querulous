@@ -1,7 +1,7 @@
 package com.twitter.querulous.sql
 
 import java.sql._
-import org.apache.commons.dbcp.TesterPreparedStatement
+import org.apache.commons.dbcp2.TesterPreparedStatement
 
 class FakePreparedStatement(
   val conn: Connection,

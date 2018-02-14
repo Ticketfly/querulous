@@ -1,14 +1,14 @@
 package com.twitter.querulous.sql
 
 import java.sql._
-import org.apache.commons.dbcp.TesterResultSet
+import org.apache.commons.dbcp2.TesterResultSet
 
 class FakeResultSet(
   private[this] val stmt: Statement,
   private[this] val data: scala.Array[scala.Array[java.lang.Object]],
   private[this] val resultSetType: Int,
   private[this] val resultSetConcurrency: Int
-  ) extends TesterResultSet(stmt, data, resultSetType, resultSetConcurrency) {
+  ) extends TesterResultSet(stmt, resultSetType, resultSetConcurrency) {
 
   private[this] var currentRow: Int = -1
 
@@ -24,8 +24,8 @@ class FakeResultSet(
   override def next(): Boolean = {
     checkOpen()
     if (this.data != null) {
-      currentRow = currentRow + 1;
-      currentRow < this.data.length;
+      currentRow = currentRow + 1
+      currentRow < this.data.length
     } else {
       false
     }

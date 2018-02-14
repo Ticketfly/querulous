@@ -1,7 +1,7 @@
 package com.twitter.querulous.unit
 
 import java.sql.Connection
-import org.apache.commons.dbcp.{DelegatingConnection => DBCPConnection}
+import org.apache.commons.dbcp2.{DelegatingConnection => DBCPConnection}
 import com.mysql.jdbc.{ConnectionImpl => MySQLConnection}
 import org.specs2.mock.Mockito
 import scala.concurrent.duration._
@@ -14,7 +14,7 @@ class DatabaseSpec extends ConfiguredSpecification with Mockito {
   val defaultProps = Map("socketTimeout" -> "41", "connectTimeout" -> "42")
 
   def mysqlConn(conn: Connection) = conn match {
-    case c: DBCPConnection =>
+    case c: DBCPConnection[_] =>
       c.getInnermostDelegate.asInstanceOf[MySQLConnection]
     case c: MySQLConnection => c
   }

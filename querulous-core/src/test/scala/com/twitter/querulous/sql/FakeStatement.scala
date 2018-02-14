@@ -1,7 +1,7 @@
 package com.twitter.querulous.sql
 
 import java.sql._
-import org.apache.commons.dbcp.TesterStatement
+import org.apache.commons.dbcp2.TesterStatement
 
 class FakeStatement(
   private[this] val conn: Connection,

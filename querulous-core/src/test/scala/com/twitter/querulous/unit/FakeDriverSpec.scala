@@ -1,15 +1,15 @@
 package com.twitter.querulous.unit
 
-import com.twitter.querulous.ConfiguredSpecification
-import scala.concurrent.duration._
-import scala.concurrent.duration.{Duration => D}
-import org.apache.commons.dbcp.DelegatingConnection
-import com.twitter.querulous.database._
-import com.twitter.querulous.sql.{FakeContext, FakeConnection, FakeDriver}
+import java.sql.{DriverManager, SQLException}
+
 import com.mysql.jdbc.exceptions.jdbc4.CommunicationsException
-import java.sql.{SQLException, DriverManager}
+import com.twitter.querulous.ConfiguredSpecification
+import com.twitter.querulous.database._
+import com.twitter.querulous.sql.{FakeConnection, FakeContext, FakeDriver}
+import org.apache.commons.dbcp2.DelegatingConnection
 import org.specs2.mutable._
-import org.specs2.matcher._
+
+import scala.concurrent.duration.{Duration => D, _}
 
 class FakeDriverSpec extends ConfiguredSpecification {
   sequential
@@ -25,7 +25,7 @@ class FakeDriverSpec extends ConfiguredSpecification {
     "the real connection should be FakeConnection" in {
       val db    = factory(config.hostnames.toList, null, config.username, config.password, Map.empty, FakeDriver.DRIVER_NAME)
       val conn = db.open() match {
-        case c: DelegatingConnection => c.getInnermostDelegate
+        case c: DelegatingConnection[_] => c.getInnermostDelegate
         case c => c
       }
 

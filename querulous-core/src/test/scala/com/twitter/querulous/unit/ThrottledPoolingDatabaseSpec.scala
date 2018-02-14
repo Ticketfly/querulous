@@ -2,7 +2,7 @@ package com.twitter.querulous.unit
 
 import scala.concurrent.duration.{ Duration => D }
 import scala.concurrent.duration._
-import org.apache.commons.pool.ObjectPool
+import org.apache.commons.pool2.ObjectPool
 import org.specs2.mutable._ // Specification
 import org.specs2.mock.Mockito
 import org.specs2.matcher._
@@ -13,7 +13,7 @@ import java.sql.{SQLException, Connection}
 class PooledConnectionSpec extends Specification with Mockito {
   "PooledConnectionSpec" should {
     "return to the pool" in {
-      val p = mock[ObjectPool]
+      val p = mock[ObjectPool[PooledConnection]]
       val c = mock[Connection]
       val conn = new PooledConnection(c, p)
 
@@ -31,11 +31,11 @@ class PooledConnectionSpec extends Specification with Mockito {
     }
 
    "eject from the pool only once" in {
-      val p = mock[ObjectPool]
+      val p = mock[ObjectPool[PooledConnection]]
       val c = mock[Connection]
       val conn = new PooledConnection(c, p)
 
-      
+
       c.isClosed() returns true
       c.isClosed() returns true
 
@@ -47,11 +47,9 @@ class PooledConnectionSpec extends Specification with Mockito {
       conn.close() must throwA[SQLException]
       conn.close() must throwA[SQLException]
 
-      got {
-        one(c).isClosed() andThen
-        one(p).invalidateObject(conn) andThen
-        one(c).isClosed() 
-      }
+      there was
+        two(c).isClosed() andThen
+        one(p).invalidateObject(conn)
     }
   }
 }
