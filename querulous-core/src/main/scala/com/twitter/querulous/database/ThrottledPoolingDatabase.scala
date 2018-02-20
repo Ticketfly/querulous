@@ -3,8 +3,8 @@ package com.twitter.querulous.database
 import java.util.logging.{Logger, Level}
 import java.util.concurrent.{TimeUnit, LinkedBlockingQueue}
 import java.sql.{SQLException, DriverManager, Connection}
-import org.apache.commons.dbcp.{PoolingDataSource, DelegatingConnection}
-import org.apache.commons.pool.{PoolableObjectFactory, ObjectPool}
+import org.apache.commons.dbcp2.{PoolingDataSource, DelegatingConnection}
+import org.apache.commons.pool2.ObjectPool
 import concurrent.duration._
 import compat.Platform
 import scala.annotation.tailrec
@@ -14,8 +14,8 @@ import java.util.concurrent.atomic.AtomicInteger
 class PoolTimeoutException extends SQLException
 class PoolEmptyException extends SQLException
 
-class PooledConnection(c: Connection, p: ObjectPool) extends DelegatingConnection(c) {
-  private var pool: Option[ObjectPool] = Some(p)
+class PooledConnection(c: Connection, p: ObjectPool[PooledConnection]) extends DelegatingConnection(c) {
+  private var pool: Option[ObjectPool[PooledConnection]] = Some(p)
 
   private def invalidateConnection() {
     pool.foreach { _.invalidateObject(this) }
@@ -23,11 +23,10 @@ class PooledConnection(c: Connection, p: ObjectPool) extends DelegatingConnectio
   }
 
   override def close() {
-    val closed = try { c.isClosed() } catch {
-      case e: Exception => {
+    val closed = try { c.isClosed } catch {
+      case e: Exception =>
         invalidateConnection()
         throw e
-      }
     }
 
     if (!closed) {
@@ -54,13 +53,13 @@ class ThrottledPool(
     val size    :Int, 
     timeout     :Duration,
     idleTimeout :Duration, 
-    name        :String) extends ObjectPool {
+    name        :String) extends ObjectPool[PooledConnection] {
   
   private val pool        = new LinkedBlockingQueue[(PooledConnection, Long)]() // Long used to be Time
   private val currentSize = new AtomicInteger(0)
   private val numWaiters  = new AtomicInteger(0)
 
-  try { for (i <- (0.until(size))) addObject() } catch {
+  try { for (i <- 0.until(size)) addObject() } catch {
     // bail until the watchdog thread repopulates.
     case e: Throwable => {
       val l = Logger.getLogger("querulous")
@@ -73,17 +72,17 @@ class ThrottledPool(
     currentSize.incrementAndGet()
   }
 
-  def addObjectIfEmpty() = synchronized {
+  def addObjectIfEmpty(): Unit = synchronized {
     if (getTotal() == 0) addObject()
   }
 
-  def addObjectUnlessFull() = synchronized {
+  def addObjectUnlessFull(): Unit = synchronized {
     if (getTotal() < size) {
       addObject()
     }
   }
 
-  final def borrowObject(): Connection = {
+  final def borrowObject(): PooledConnection = {
     numWaiters.incrementAndGet()
     try {
       borrowObjectInternal()
@@ -92,7 +91,7 @@ class ThrottledPool(
     }
   }
 
-  @tailrec private def borrowObjectInternal(): Connection = {
+  @tailrec private def borrowObjectInternal(): PooledConnection = {
     // short circuit if the pool is empty
     if (getTotal() == 0) throw new PoolEmptyException
 
@@ -135,19 +134,16 @@ class ThrottledPool(
     numWaiters.get()
   }
 
-  def invalidateObject(obj: Object) {
+  def invalidateObject(obj: PooledConnection) {
     currentSize.decrementAndGet()
   }
 
-  def returnObject(obj: Object) {
+  def returnObject(obj: PooledConnection) {
     val conn = obj.asInstanceOf[PooledConnection]
 
     pool.offer((conn, Platform.currentTime))
   }
 
-  def setFactory(factory: PoolableObjectFactory) {
-    // deprecated
-  }
 }
 
 class PoolWatchdogThread(

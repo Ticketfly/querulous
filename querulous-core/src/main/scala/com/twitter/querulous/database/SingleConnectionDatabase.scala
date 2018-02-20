@@ -1,6 +1,6 @@
 package com.twitter.querulous.database
 
-import org.apache.commons.dbcp.DriverManagerConnectionFactory
+import org.apache.commons.dbcp2.DriverManagerConnectionFactory
 import java.sql.{SQLException, Connection}
 import concurrent.duration._
 

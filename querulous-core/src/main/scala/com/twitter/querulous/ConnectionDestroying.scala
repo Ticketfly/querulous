@@ -1,7 +1,7 @@
 package com.twitter.querulous.query
 
 import java.sql.Connection
-import org.apache.commons.dbcp.{DelegatingConnection => DBCPConnection}
+import org.apache.commons.dbcp2.{DelegatingConnection => DBCPConnection}
 import com.mysql.jdbc.MySQLConnection
 
 trait DestroyableConnection {
@@ -13,7 +13,7 @@ trait ConnectionDestroying {
   def destroyConnection(conn: Connection) {
     if (!conn.isClosed)
       conn match {
-        case c: DBCPConnection =>
+        case c: DBCPConnection[_] =>
           destroyDbcpWrappedConnection(c)
         case c: MySQLConnection =>
           c.abortInternal()
@@ -23,7 +23,7 @@ trait ConnectionDestroying {
       }
   }
 
-  def destroyDbcpWrappedConnection(conn: DBCPConnection) {
+  def destroyDbcpWrappedConnection(conn: DBCPConnection[_]) {
     val inner = conn.getInnermostDelegate
 
     if (inner ne null) {

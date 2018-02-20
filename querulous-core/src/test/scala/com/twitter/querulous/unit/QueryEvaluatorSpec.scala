@@ -10,7 +10,7 @@ import com.twitter.querulous.ConfiguredSpecification
 import org.specs2.mock.Mockito
 import org.specs2.mutable._
 
-class QueryEvaluatorSpec extends ConfiguredSpecification with Mockito  {
+class QueryEvaluatorSpec extends ConfiguredSpecification with Mockito {
   import TestEvaluator._
   sequential
 
@@ -20,17 +20,7 @@ class QueryEvaluatorSpec extends ConfiguredSpecification with Mockito  {
       val rootQueryEvaluator = testEvaluatorFactory(config.withoutDatabase)
       val queryFactory = new SqlQueryFactory
 
-      implicit lazy val ba = new BeforeAfter {
-        def before = {
-          rootQueryEvaluator.execute("CREATE DATABASE IF NOT EXISTS db_test")
-        }
-
-        def after = {
-          queryEvaluator.execute("DROP TABLE IF EXISTS foo")
-        }
-      }
-
-      "connection pooling" in {   
+      "connection pooling" in {
 
         "transactionally" >> {
           val connection = mock[Connection]
@@ -96,11 +86,13 @@ class QueryEvaluatorSpec extends ConfiguredSpecification with Mockito  {
 
         "when there is an exception" >> {
 
-          queryEvaluator.execute("CREATE TABLE foo (bar INT) ENGINE=INNODB")
+          rootQueryEvaluator.execute("CREATE DATABASE IF NOT EXISTS db_test")
+          queryEvaluator.execute("DROP TABLE IF EXISTS querulous_unit_queryevaluatorspec")
+          queryEvaluator.execute("CREATE TABLE querulous_unit_queryevaluatorspec (bar INT) ENGINE=INNODB")
 
           try {
             queryEvaluator.transaction { transaction =>
-              transaction.execute("INSERT INTO foo VALUES (1)")
+              transaction.execute("INSERT INTO querulous_unit_queryevaluatorspec VALUES (1)")
               throw new Exception("oh noes")
             }
           } catch {
@@ -111,13 +103,15 @@ class QueryEvaluatorSpec extends ConfiguredSpecification with Mockito  {
         }
 
         "when there is not an exception" >> {
-          queryEvaluator.execute("CREATE TABLE foo (bar VARCHAR(50), baz INT) ENGINE=INNODB")
+          rootQueryEvaluator.execute("CREATE DATABASE IF NOT EXISTS db_test")
+          queryEvaluator.execute("DROP TABLE IF EXISTS querulous_unit_queryevaluatorspec")
+          queryEvaluator.execute("CREATE TABLE querulous_unit_queryevaluatorspec (bar VARCHAR(50), baz INT) ENGINE=INNODB")
 
           queryEvaluator.transaction { transaction =>
-            transaction.execute("INSERT INTO foo VALUES (?, ?)", "one", 2)
+            transaction.execute("INSERT INTO querulous_unit_queryevaluatorspec VALUES (?, ?)", "one", 2)
           }
 
-          queryEvaluator.select("SELECT * FROM foo") { row => (row.getString("bar"), row.getInt("baz")) }.toList mustEqual List(("one", 2))
+          queryEvaluator.select("SELECT * FROM querulous_unit_queryevaluatorspec") { row => (row.getString("bar"), row.getInt("baz")) }.toList mustEqual List(("one", 2))
         } 
       } 
     //}

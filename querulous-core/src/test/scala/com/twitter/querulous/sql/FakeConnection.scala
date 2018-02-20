@@ -5,7 +5,7 @@ import java.util.Properties
 import com.mysql.jdbc.exceptions.jdbc4.CommunicationsException
 import java.net.SocketException
 import com.twitter.querulous.query.DestroyableConnection
-import org.apache.commons.dbcp.TesterConnection
+import org.apache.commons.dbcp2.TesterConnection
 
 class FakeConnection(val url: String, val info: Properties, val user: String, val passwd: String)
   extends TesterConnection(user, passwd) with DestroyableConnection {

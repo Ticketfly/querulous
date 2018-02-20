@@ -2,6 +2,7 @@ package com.twitter.querulous.sql
 
 import java.util.Properties
 import java.sql._
+import java.util.logging.Logger
 
 class FakeDriver extends Driver {
   @throws(classOf[SQLException])
@@ -35,8 +36,11 @@ class FakeDriver extends Driver {
   }
 
   def getPropertyInfo(url: String, info: Properties): scala.Array[DriverPropertyInfo] = {
-    new scala.Array[DriverPropertyInfo](0);
+    new scala.Array[DriverPropertyInfo](0)
   }
+
+  @throws[SQLFeatureNotSupportedException]
+  def getParentLogger: Logger = throw new SQLFeatureNotSupportedException()
 
 }
 
@@ -46,7 +50,7 @@ object FakeDriver {
   val DRIVER_NAME: String = "jdbc:twitter:querulous:mockdriver"
 
   try {
-    DriverManager.registerDriver(new FakeDriver());
+    DriverManager.registerDriver(new FakeDriver())
   } catch {
     case e: SQLException => {
       e.printStackTrace()
